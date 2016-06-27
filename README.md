@@ -1,88 +1,37 @@
-# Heroku Buildpack for Node.js
+# Custom Heroku Buildpack for Node.js submodule
 
-![nodejs](https://cloud.githubusercontent.com/assets/51578/13712672/efdf2a40-e792-11e5-82ef-492478cbc0dc.png)
+This buildpack forks the default Heroku buildpack for Node.js apps.
+Its main purpose is to clone a third party Node.js app (the submodule) that provides assets to the main application.
 
-This is the official [Heroku buildpack](http://devcenter.heroku.com/articles/buildpacks) for Node.js apps.
+How it works:
+- clone the remote repository (it uses a deployment private key if the repository is private)
+- install the dependencies
+- run the NPM command (buildEntries) to create the bundled assets
 
-[![Build Status](https://travis-ci.org/heroku/heroku-buildpack-nodejs.svg)](https://travis-ci.org/heroku/heroku-buildpack-nodejs)
+### Main app configuration
 
-## Documentation
+If the submodule is stored on a private repository, you need to add the *PRIVATE_KEY* environment variable.
 
-For more information about using this Node.js buildpack on Heroku, see these Dev Center articles:
+This variable should contain the private key itself.  Make sure you defined a deployment private key with read only access on that specific repository.
 
-- [Heroku Node.js Support](https://devcenter.heroku.com/articles/nodejs-support)
-- [Getting Started with Node.js on Heroku](https://devcenter.heroku.com/articles/nodejs)
+Regarding the submodule, add the following environment variables (in the main app):
 
-For more general information about buildpacks on Heroku:
+- *SUBMODULE_BRANCH*: the branch to use for the submodule
+- *SUBMODULE_URL*: the url of the repository
+- *SUBMODULE_DIR*: the local directory to clone the submodule into
 
-- [Buildpacks](https://devcenter.heroku.com/articles/buildpacks)
-- [Buildpack API](https://devcenter.heroku.com/articles/buildpack-api)
+If one of these env variables is missing, the buildpack exits.
 
-## Locking to a buildpack version
+- *ENTRIES_OUTPUT_RELATIVE_PATH*: the output path of the entries, relatively to the root path of the main app
 
-In production, you frequently want to lock all of your dependencies - including
-buildpacks - to a specific version. That way, you can regularly update and
-test them, upgrading with confidence.
-
-First, find the version you want from
-[the list of buildpack versions](https://github.com/heroku/heroku-buildpack-nodejs/releases).
-Then, specify that version with `buildpacks:set`:
+### Add this buildpack to a Heroku app
 
 ```
-heroku buildpacks:set https://github.com/heroku/heroku-buildpack-nodejs#v83 -a my-app
+heroku buildpacks:add <buildpack_name || buildpack_url> --index 1
 ```
 
-If you have trouble upgrading to the latest version of the buildpack, please
-open a support ticket at [help.heroku.com](https://help.heroku.com/) so we can assist.
-
-### Chain Node with multiple buildpacks
-
-This buildpack automatically exports node, npm, and any node_modules binaries
-into the `$PATH` for easy use in subsequent buildpacks.
-
-## Feedback
-
-Having trouble? Dig it? Feature request?
-
-- [help.heroku.com](https://help.heroku.com/)
-- [@hunterloftis](http://twitter.com/hunterloftis)
-- [GitHub issues](https://github.com/heroku/heroku-buildpack-nodejs/issues)
-
-## Hacking
-
-To make changes to this buildpack, fork it on GitHub.
-Push up changes to your fork, then create a new Heroku app to test it,
-or configure an existing app to use your buildpack:
+### Remove a buildpack from a Heroku app
 
 ```
-# Create a new Heroku app that uses your buildpack
-heroku create --buildpack <your-github-url>
-
-# Configure an existing Heroku app to use your buildpack
-heroku buildpacks:set <your-github-url>
-
-# You can also use a git branch!
-heroku buildpacks:set <your-github-url>#your-branch
+heroku buildpacks:remove <buildpack_name || buildpack_url>
 ```
-
-## Tests
-
-The buildpack tests use [Docker](https://www.docker.com/) to simulate
-Heroku's Cedar and Cedar-14 containers.
-
-To run the test suite:
-
-```
-make test
-```
-
-Or to just test in cedar or cedar-14:
-
-```
-make test-cedar-10
-make test-cedar-14
-```
-
-The tests are run via the vendored
-[shunit2](http://shunit2.googlecode.com/svn/trunk/source/2.1/doc/shunit2.html)
-test framework.

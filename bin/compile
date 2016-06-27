@@ -12,12 +12,37 @@ unset GIT_DIR     # Avoid GIT_DIR leak from previous build steps
 
 DEFAULT_CACHE="node_modules bower_components"
 
-### Configure directories
+### Static directories
 
-BUILD_DIR=${1:-}
 CACHE_DIR=${2:-}
 ENV_DIR=${3:-}
 BP_DIR=$(cd $(dirname ${0:-}); cd ..; pwd)
+
+### Early dependencies
+
+source $BP_DIR/lib/submodule.sh
+source $BP_DIR/lib/output.sh
+
+### Check if submodule specified
+
+if ! check_if_submodule_specified "$ENV_DIR"; then
+  header 'No submodule specified, exiting...'
+  exit 0
+fi
+
+### Add ssh key to clone client app
+
+header "Creating SSH key file"
+export_private_key_env_var $ENV_DIR
+create_ssh_key_file
+
+### Configure directories
+
+header "Preparing submodule"
+export_repo_env_var $ENV_DIR
+cd ${1:-}; clone_repo $SUBMODULE_URL $SUBMODULE_BRANCH $SUBMODULE_DIR;
+
+BUILD_DIR=$(cd ${1:-}; cd $SUBMODULE_DIR; pwd)
 
 mkdir -p "$BUILD_DIR/.heroku/node/"
 cd $BUILD_DIR
@@ -28,7 +53,6 @@ echo "" > "$LOG_FILE"
 
 ### Load dependencies
 
-source $BP_DIR/lib/output.sh
 source $BP_DIR/lib/json.sh
 source $BP_DIR/lib/failure.sh
 source $BP_DIR/lib/environment.sh
@@ -132,6 +156,7 @@ build_dependencies() {
 
 header "Building dependencies"
 build_dependencies | output "$LOG_FILE"
+build_entries "${1:-}" | output "$LOG_FILE"
 
 cache_build() {
   local cache_directories=$(get_cache_directories)
